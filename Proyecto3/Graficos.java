@@ -1,69 +1,75 @@
 import java.io.*;
 import java.net.*;
-import java.awt.*;
-import java.nio.ByteBuffer;
+import java.nio.ByteBuffer;  //Para manejo de ByteBuffer
 import java.nio.ByteOrder;
 
+import java.awt.*;
+
 public class Graficos extends javax.swing.JFrame {
+    int x0,xN,y0,yN;  //posiciones a dibujar
+    double xmin,xmax,ymin,ymax;  //valores limite de la onda
+    int apAncho,apAlto;  //Valores para calcular la altura y ancho de la onda
   
     public Graficos() {
-        initComponents();
+        initComponents(); //Interfaz;
     }
 
     public void paint( Graphics g ) {
         int j1;
         DatagramSocket sock = null;
-        int port = 7200, id = 0, idd, x,y;
-        ByteBuffer res =  ByteBuffer.allocate(20);
-        DatagramPacket receive,response;
+        int port = 7200,id;
         boolean band=true;
             try{
                 sock = new DatagramSocket(port); 
                 sock.setReuseAddress(true);
                 g.setColor(Color.WHITE);
-                g.drawLine( 400,0,400,600 );
-                g.drawLine( 0,300,600,300 );
+                g.drawLine( 400 , 0 , 400 , 600 );
+                g.drawLine( 0 , 300 , 800 , 300 );
                 while( true ){
+                    id = 0;
                     j1 = 150;
-                    if (band==true)
+                    if ( band == true )
                         g.setColor(Color.ORANGE);
                     else
                         g.setColor(Color.BLACK);
-                    for( int i=0 ; i < 800 ; i++ ){
+                    
+                    for( int i=0; i < apAncho; i++ ){
                         byte[] buffer = new byte[65536];
-                        receive = new DatagramPacket(buffer, buffer.length);
-                        sock.receive(reply);
-                        byte[] data = reply.getData();
+                        DatagramPacket receive = new DatagramPacket(buffer, buffer.length);
+                        sock.receive(receive);
+                        byte[] data = receive.getData();
                         ByteBuffer buf = ByteBuffer.wrap(data);
-                        buf.order( ByteOrder.LITTLE_ENDIAN );
-            			idd = buf.getInt();
-                        x = buf.getInt();
-                        y = buf.getInt();
+                        buf.order(ByteOrder.LITTLE_ENDIAN);
+            			int idd = buf.getInt();
+                        int x = buf.getInt();
+                        int y = buf.getInt();
 			            if ( idd < id )
 				            i--;
 			            else{
                             id++;
+                            System.out.println("id: "+ idd+ " int MIN = " + x + " int MAX = " + y);
                             g.drawLine( i,j1,x,y );
                             j1 = y;
                         }
-			            res.order( ByteOrder.LITTLE_ENDIAN );
+                        ByteBuffer res =  ByteBuffer.allocate(20);
+			            res.order(ByteOrder.LITTLE_ENDIAN);
 			            res.putInt(id);
 			            res.putInt(0);
 			            res.putInt(0);
 			            res.putInt(0);
 			            res.putInt(0);
-			            response = new DatagramPacket(res.array(),res.limit(),receive.getAddress(),receive.getPort() );
-			            sock.send( response );		
+                        System.out.println("Enviando ID: " + id);
+			            DatagramPacket response = new DatagramPacket(res.array(),res.limit(),receive.getAddress(),receive.getPort() );
+			            sock.send(response);		
                     }
                     band=!band;
                 }
-
             }
             catch(IOException e){
                 System.err.println("IOException " + e);
-            } 
+            }
     }
-
+  
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">                          
     private void initComponents() {
