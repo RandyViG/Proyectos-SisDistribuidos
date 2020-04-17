@@ -1,72 +1,115 @@
 import java.io.*;
-import java.net.*;
-import java.nio.ByteBuffer;  //Para manejo de ByteBuffer
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import javax.swing.JFrame;
+import javax.swing.WindowConstants;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 
-import java.awt.*;
-
-public class Graficos extends javax.swing.JFrame {
+public class Graficos extends JFrame {
   
     public Graficos() {
-        initComponents(); //Interfaz;
+        initComponents();
     }
-    public void paint( Graphics g ) {
-        int previous;
-        DatagramSocket sock = null;
-        int port = 7200;
-        boolean draw = true;
+    
+    static class Server {
+        private DatagramSocket sock;
+        private DatagramPacket reply,resp;
+        private final int port;
+        private int x,y,id;
+        
+        public Server( int port ){
+            this.port = port;
+        }
+        public void start(){
             try{
                 sock = new DatagramSocket(port); 
                 sock.setReuseAddress(true);
-                g.setColor(Color.WHITE);
-                g.drawLine(400,0,400,600);
-                g.drawLine(0,300,0,800);
-                for(;;){
-                    int id = 0;
-                    previous = 300;
-                    if (draw==true){
-                        g.setColor(Color.WHITE);
-                    }else{
-                        g.setColor(Color.BLACK);
-                    }
-                    for( int i=0; i < 800; i++ ){
-                        byte[] buffer = new byte[65536];
-                        DatagramPacket reply = new DatagramPacket(buffer, buffer.length);
-                        sock.receive(reply);
-                        byte[] data = reply.getData();
-                        ByteBuffer buf = ByteBuffer.wrap(data);
-                        buf.order(ByteOrder.LITTLE_ENDIAN);
-            			int idd = buf.getInt();
-                        int x = buf.getInt();
-                        int y = buf.getInt();
-			            if ( idd < id )
-				            i--;
-			            else{
-                            id++;
-                            System.out.println("id: "+ idd+ " int MIN = " + x + " int MAX = " + y);
-                            g.drawLine( i,previous,x,y );
-                            previous = y;
-                        }
-                        ByteBuffer res =  ByteBuffer.allocate(20);
-			            res.order(ByteOrder.LITTLE_ENDIAN);
-			            res.putInt(id);
-			            res.putInt(0);
-			            res.putInt(0);
-			            res.putInt(0);
-			            res.putInt(0);
-			            DatagramPacket resp = new DatagramPacket(res.array(),res.limit(),reply.getAddress(),reply.getPort() );
-			            sock.send(resp);		
-                    }
-                    draw=!draw;
-                }
-
-            }
-            catch(IOException e){
+            }catch(IOException e){
                 System.err.println("IOException " + e);
             }
+        }
+        public void receive(){
+            try{
+                byte[] buffer = new byte[65536];
+                reply = new DatagramPacket(buffer, buffer.length);
+                sock.receive(reply);
+                byte[] data = reply.getData();
+                ByteBuffer buf = ByteBuffer.wrap(data);
+                buf.order(ByteOrder.LITTLE_ENDIAN);
+                this.id = buf.getInt();
+                this.x = buf.getInt();
+                this.y = buf.getInt();
+            }catch( Exception e){
+                e.printStackTrace();
+            }
+        }
+        public void response( int idd ){
+            try{
+                ByteBuffer res =  ByteBuffer.allocate(20);
+                res.order(ByteOrder.LITTLE_ENDIAN);
+                res.putInt(idd);
+                res.putInt(0);
+                res.putInt(0);
+                res.putInt(0);
+                res.putInt(0);
+                resp = new DatagramPacket(res.array(),res.limit(),reply.getAddress(),reply.getPort() );
+                sock.send(resp);
+            }catch( Exception e){
+                e.printStackTrace();
+            }
+        }
+        public int getID(){ return this.id; }
+        public int getX(){ return this.x; }
+        public int getY(){ return this.y; }
     }
-    @SuppressWarnings("unchecked")
-    // <editor-fold defaultstate="collapsed" desc="Generated Code">                          
+    
+    @Override
+    public void paint( Graphics g ) {
+        int previous;
+        int idRequest;
+        boolean draw = true;
+        Graficos.Server server = new Graficos.Server(7200);
+        server.start();
+        while(true) {
+            idRequest = 0;
+            previous = 300;
+            setPlane(g);
+            if (draw==true){
+                g.setColor(Color.ORANGE);
+            }else{
+                g.setColor(Color.BLACK);
+            }
+            for( int i=0; i < 800; i++ ){
+                server.receive();
+                if ( idRequest < server.getID() )
+                    i--;
+                else{
+                    idRequest++;
+                    g.drawLine( i,previous,server.getX(), server.getY() );
+                    System.out.println("X: " + server.getX() + " Y: " +server.getY());
+                    previous = server.getY();
+                }
+                server.response(idRequest);
+            }
+            draw=!draw;
+        }
+    }
+    
+    private static void setPlane( Graphics g){
+        g.setColor(Color.WHITE);
+        g.drawLine(400,0,400,700);
+        g.drawLine(0,300,0,900);
+        g.setColor(Color.BLUE);
+        g.drawLine(10,400,180,100);
+        g.drawLine(180,100,630,100);
+    }
+    
+    @SuppressWarnings("unchecked")                         
     private void initComponents() {
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
@@ -82,17 +125,14 @@ public class Graficos extends javax.swing.JFrame {
             .addGap(0, 600, Short.MAX_VALUE)
         );
         super.setBackground(Color.BLACK);
+        super.setTitle("Servidor Gráfico");
+        super.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         pack();
-    }// </editor-fold>                        
+    }                    
 
-    /**
-    * @param args the command line arguments
-    */
     public static void main(String args[]) {
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                new Graficos().setVisible(true);
-            }
+        java.awt.EventQueue.invokeLater(() -> {
+            new Graficos().setVisible(true);
         });
     }
 }
