@@ -103,10 +103,14 @@ public class Graficos extends JFrame {
     private static void setPlane( Graphics g){
         g.setColor(Color.WHITE);
         g.drawLine(400,0,400,700);
-        g.drawLine(0,300,0,900);
+        g.drawLine(0,300,900,300);
         g.setColor(Color.BLUE);
-        g.drawLine(10,400,180,100);
-        g.drawLine(180,100,630,100);
+        g.drawLine(0,300,0,420);
+        g.drawLine(0,420,320,167);
+        g.drawLine(320,167,320,420);
+        g.drawLine(320,420,640,167);
+        g.drawLine(640,167,640,420);
+        g.drawLine(640,420,800,300);
     }
     
     @SuppressWarnings("unchecked")                         
