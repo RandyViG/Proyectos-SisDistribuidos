@@ -1,10 +1,10 @@
-run: Coordenadas.cpp SocketDatagrama.o
-	g++ -std=c++11 Coordenadas.cpp SocketDatagrama.o PaqueteDatagrama.o -o Coordenadas -lpthread
-	
-SocketDatagrama.o: SocketDatagrama.cpp PaqueteDatagrama.o SocketDatagrama.h
-	g++ SocketDatagrama.cpp -c 
-
-PaqueteDatagrama.o: PaqueteDatagrama.cpp PaqueteDatagrama.h
-	g++ PaqueteDatagrama.cpp -c
+cliente:	cliente.cpp Solicitud.o SocketDatagrama.o PaqueteDatagrama.o
+		g++ -std=c++11 cliente.cpp Solicitud.o SocketDatagrama.o PaqueteDatagrama.o -o cliente -lpthread
+Solicitud.o:	Solicitud.cpp Solicitud.h
+		g++ -c Solicitud.cpp
+SocketDatagrama.o:	SocketDatagrama.cpp SocketDatagrama.h
+			g++ -c SocketDatagrama.cpp
+PaqueteDatagrama.o:	PaqueteDatagrama.cpp PaqueteDatagrama.h
+			g++ -c PaqueteDatagrama.cpp
 clean:
-	rm -f *.o Coordenadas
+	rm -f *.o cliente
