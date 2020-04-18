@@ -30,7 +30,6 @@ int * Solicitud :: doOperation( char *IP, int puerto, int operationId, char *arg
             if( respuesta.requestId < id )
                 continue;
             aux = respuesta.arguments;
-            printf("Exito\n");
             return aux;
         }
     }

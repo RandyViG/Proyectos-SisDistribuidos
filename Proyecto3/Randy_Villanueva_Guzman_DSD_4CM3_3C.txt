@@ -1,0 +1,331 @@
+#include "Solicitud.h"
+#include <iostream>
+#include <unistd.h>
+#include <cstring>
+#include <thread>
+#include <cmath>
+#include <mutex>
+
+using namespace std;
+
+const double PI = 3.141592653589;
+const double periodos = PI / 160;
+char ip[16]= "127.0.0.1";
+mutex m;
+int pto = 7200;
+
+void graficar( int i );
+int escala( double y );
+void calcularCoordenadas(int * coordenada, int iteracion , int termino);
+double serieFourier( double x , int termino);
+
+int main( void ){
+    for ( int i = 0 ; 1 ; i++ ){
+        thread dibujar(graficar, i),borrar(graficar, i);
+        dibujar.join(); borrar.join();
+    }
+    return 0;
+}
+
+void graficar(int i){
+    int coordenada[2],result;
+    Solicitud sol;
+    m.lock();
+    for ( int j = 1; j <= 800 ; j++){
+        calcularCoordenadas(coordenada,j,i);
+        memcpy(&result,sol.doOperation( ip , pto , 1 ,(char*)&coordenada ),4);
+        usleep(1500);
+    }
+    m.unlock();
+}
+
+int escala( double y ) {
+    double coord = 300 - (40*y) ;
+    return (int)coord;
+}
+
+void calcularCoordenadas( int * coordenada , int iteracion , int termino){
+    double x,y;
+    x = ( (PI) + ( periodos * iteracion ) );
+    y = 2 * ( sin(x) + serieFourier(x,termino) );
+    coordenada[0] = iteracion;
+    coordenada[1] = escala(y);
+}
+
+// Onda en Diente de Sierra
+double serieFourier( double x , int termino){
+    double suma = 0.0, parcial, aux = 2;
+    for ( int i = 0; i < termino ; i++){
+        parcial = ( 1 / aux ) * sin(aux*x);
+        if ( (int)aux % 2 == 0 ) 
+            parcial *= -1;  
+        suma += parcial;
+        aux +=1 ;
+    }
+    return suma;
+}
+
+--------------------------------------------------------------------------------------------------------
+
+#ifndef __MENSAJE_H__
+#define __MENSAJE_H__
+
+#define TAM_MAX_DATA 2
+
+struct mensaje{
+    int requestId;
+    int arguments[TAM_MAX_DATA];
+    int messageType;
+    int operationId;
+};
+
+#endif
+
+--------------------------------------------------------------------------------------------------------
+
+#ifndef __SOLICITUD_H__
+#define __SOLICITUD_H__
+
+#include "SocketDatagrama.h"
+
+class Solicitud{
+    private:
+        int id = 0;
+        SocketDatagrama *socketlocal;
+    public:
+        Solicitud();
+        int * doOperation(char *IP, int puerto, int operationId, char *arguments );
+};
+
+#endif
+
+--------------------------------------------------------------------------------------------------------
+
+#include <iostream>
+#include <cstring>
+#include "Solicitud.h"
+#include "mensaje.h"
+
+#define SEGUNDOS 2
+#define MICROSEGUNDOS 500000
+using namespace std;
+
+Solicitud :: Solicitud (){
+    socketlocal = new SocketDatagrama( 0 );
+}
+
+int * Solicitud :: doOperation( char *IP, int puerto, int operationId, char *arguments ){
+    
+    struct mensaje datos,respuesta;
+    int *aux;
+    int i,n;
+    datos.messageType = 0;
+    datos.operationId = operationId;
+    datos.requestId = id++;
+    memcpy( datos.arguments ,arguments , sizeof(arguments) );
+    PaqueteDatagrama dat = PaqueteDatagrama( (char *)&datos, sizeof(datos), IP ,puerto );
+    PaqueteDatagrama paqdata = PaqueteDatagrama( sizeof(respuesta) );
+    for(i=0; i < 20 ; i++){
+        socketlocal->envia(dat);
+        n = socketlocal->recibeTimeout(paqdata,SEGUNDOS,MICROSEGUNDOS);
+        if ( n != -1){
+            memcpy(&respuesta, paqdata.obtieneDatos(), sizeof(respuesta) );
+            if( respuesta.requestId < id )
+                continue;
+            aux = respuesta.arguments;
+            return aux;
+        }
+    }
+    printf("\n *** Servidor No Disponible, Intente Mas Tarde ***\n");
+    exit(-1);
+}
+
+--------------------------------------------------------------------------------------------------------
+
+#ifndef SOCKETDATAGRAMA_H_
+#define SOCKETDATAGRAMA_H_
+#include "PaqueteDatagrama.h"
+#include <netinet/in.h>
+
+class SocketDatagrama {
+	private:
+		struct sockaddr_in direccionLocal;
+		struct sockaddr_in direccionForanea;
+		struct timeval timeout;
+		int s;
+	public:
+		SocketDatagrama(int);
+		~SocketDatagrama();
+		int recibe(PaqueteDatagrama & p);
+		int envia(PaqueteDatagrama & p);
+		int recibeTimeout(PaqueteDatagrama & p, time_t segundos, suseconds_t microsegundos);
+
+}; 
+#endif
+
+--------------------------------------------------------------------------------------------------------
+
+#include "PaqueteDatagrama.h"
+#include "SocketDatagrama.h"
+#include <iostream>
+#include <cstring>
+#include <stdio.h>
+#include <stdlib.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <errno.h>
+
+using namespace std;
+
+SocketDatagrama :: SocketDatagrama(int pto) {
+	bzero((char *)&direccionLocal, sizeof(direccionLocal));
+	bzero((char *)&direccionForanea, sizeof(direccionForanea));
+
+	if ((s = socket(AF_INET, SOCK_DGRAM, 0)) < 0) { 
+		perror("socket creation failed"); 
+		exit(-1); 
+	}
+
+	direccionLocal.sin_family = AF_INET;
+	direccionLocal.sin_addr.s_addr = INADDR_ANY;
+	direccionLocal.sin_port = htons(pto);
+
+	if (bind(s, (struct sockaddr *)&direccionLocal, sizeof(direccionLocal)) < 0 ) { 
+		perror("bind failed"); 
+		exit(-1); 
+	}
+}
+
+SocketDatagrama :: ~SocketDatagrama() {
+	close(s);
+}
+
+int SocketDatagrama :: recibe(PaqueteDatagrama &p) {
+	unsigned int len = sizeof(direccionForanea);
+	int rec = recvfrom(s, (char *)p.obtieneDatos(), p.obtieneLongitud() * sizeof(char), 0, (struct sockaddr *) &direccionForanea, &len);
+	p.inicializaIp(inet_ntoa(direccionForanea.sin_addr));
+	p.inicializaPuerto( ntohs(direccionForanea.sin_port) );
+	return rec;
+}
+
+int SocketDatagrama ::recibeTimeout( PaqueteDatagrama & p, time_t segundos, suseconds_t microsegundos ){
+	unsigned int len;
+	int n;
+	timeout.tv_sec = segundos;
+	timeout.tv_usec = microsegundos;
+	setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));
+	len = sizeof(direccionForanea);
+	n = recvfrom(s, (char *)p.obtieneDatos(), p.obtieneLongitud() * sizeof(char), 0, (struct sockaddr *) &direccionForanea, &len);
+	if( n < 0 ){
+		if( errno == EWOULDBLOCK ){
+			fprintf(stderr, "\nTiempo para recepción transcurrido\n");
+			return -1;
+		}
+		else
+			fprintf(stderr, "\nError en recvfrom\n");
+	}
+	p.inicializaIp(inet_ntoa(direccionForanea.sin_addr));
+	p.inicializaPuerto( ntohs(direccionForanea.sin_port) );
+	return n;
+}
+
+int SocketDatagrama :: envia(PaqueteDatagrama &p) {
+   	direccionForanea.sin_family = AF_INET;
+   	direccionForanea.sin_addr.s_addr = inet_addr(p.obtieneDireccion());
+   	direccionForanea.sin_port = htons( p.obtienePuerto() );
+	return sendto(s, (char *)p.obtieneDatos(), p.obtieneLongitud() * sizeof(char), 0, (struct sockaddr *) &direccionForanea, sizeof(direccionForanea));
+}
+
+--------------------------------------------------------------------------------------------------------
+
+#ifndef PAQUETEDATAGRAMA_H_
+#define PAQUETEDATAGRAMA_H_
+
+class PaqueteDatagrama {
+	private:
+		char *datos; 
+		char ip[16]; 
+		unsigned int longitud; 
+		int puerto; 
+	public:
+		PaqueteDatagrama(char*, unsigned int, char*, int);
+		PaqueteDatagrama(unsigned int);
+		~PaqueteDatagrama();
+		char *obtieneDireccion();
+		unsigned int obtieneLongitud();
+		int obtienePuerto();
+		char *obtieneDatos();
+		void inicializaPuerto(int);
+		void inicializaIp(char*);
+		void inicializaDatos(char*);
+}; 
+#endif
+
+--------------------------------------------------------------------------------------------------------
+
+#include <string.h>
+#include <stdio.h>
+#include <cstdlib>
+#include "PaqueteDatagrama.h"
+using namespace std;
+
+PaqueteDatagrama :: PaqueteDatagrama(char* data, unsigned int datatam, char* dir, int port) {
+    datos = new char[datatam];
+    longitud = datatam;
+    memcpy(datos, data, longitud);
+    memcpy(ip, dir, sizeof(ip));
+    puerto = port;
+}
+
+PaqueteDatagrama :: PaqueteDatagrama(unsigned int tam) {
+    datos = new char[tam];
+    longitud = tam;
+}
+
+PaqueteDatagrama :: ~PaqueteDatagrama() {
+    delete[] datos;
+    longitud = 0;
+    puerto = 0;
+}
+
+char* PaqueteDatagrama :: obtieneDireccion() {
+    return ip;
+}
+
+unsigned int PaqueteDatagrama :: obtieneLongitud() {
+    return longitud;
+}
+
+int PaqueteDatagrama :: obtienePuerto() {
+    return puerto;
+}
+
+char* PaqueteDatagrama :: obtieneDatos() {
+    return datos;
+}
+
+void PaqueteDatagrama :: inicializaPuerto(int port) {
+    puerto = port;
+}
+
+void PaqueteDatagrama :: inicializaIp(char* dir) {
+    memcpy(ip, dir, 16);
+}
+
+void PaqueteDatagrama :: inicializaDatos(char* data) {
+    memcpy(datos, data, longitud);
+}
+
+--------------------------------------------------------------------------------------------------------
+
+cliente:	cliente.cpp Solicitud.o SocketDatagrama.o PaqueteDatagrama.o
+		g++ -std=c++11 cliente.cpp Solicitud.o SocketDatagrama.o PaqueteDatagrama.o -o cliente -lpthread
+Solicitud.o:	Solicitud.cpp Solicitud.h
+		g++ -c Solicitud.cpp
+SocketDatagrama.o:	SocketDatagrama.cpp SocketDatagrama.h
+			g++ -c SocketDatagrama.cpp
+PaqueteDatagrama.o:	PaqueteDatagrama.cpp PaqueteDatagrama.h
+			g++ -c PaqueteDatagrama.cpp
+clean:
+	rm -f *.o cliente
