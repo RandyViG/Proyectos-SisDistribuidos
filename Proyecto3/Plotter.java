@@ -1,4 +1,4 @@
-import java.io.*;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.awt.Color;
@@ -10,15 +10,15 @@ import javax.swing.WindowConstants;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 
-public class Graficos extends JFrame {
+public class Plotter extends JFrame {
   
-    public Graficos() {
+    public Plotter() {
         initComponents();
     }
     
     static class Server {
         private DatagramSocket sock;
-        private DatagramPacket reply,resp;
+        private DatagramPacket request,resp;
         private final int port;
         private int x,y,id;
         
@@ -29,16 +29,16 @@ public class Graficos extends JFrame {
             try{
                 sock = new DatagramSocket(port); 
                 sock.setReuseAddress(true);
-            }catch(IOException e){
-                System.err.println("IOException " + e);
+            }catch(Exception e){
+                e.printStackTrace();
             }
         }
         public void receive(){
             try{
                 byte[] buffer = new byte[65536];
-                reply = new DatagramPacket(buffer, buffer.length);
-                sock.receive(reply);
-                byte[] data = reply.getData();
+                request = new DatagramPacket(buffer, buffer.length);
+                sock.receive(request);
+                byte[] data = request.getData();
                 ByteBuffer buf = ByteBuffer.wrap(data);
                 buf.order(ByteOrder.LITTLE_ENDIAN);
                 this.id = buf.getInt();
@@ -53,11 +53,9 @@ public class Graficos extends JFrame {
                 ByteBuffer res =  ByteBuffer.allocate(20);
                 res.order(ByteOrder.LITTLE_ENDIAN);
                 res.putInt(idd);
-                res.putInt(0);
-                res.putInt(0);
-                res.putInt(0);
-                res.putInt(0);
-                resp = new DatagramPacket(res.array(),res.limit(),reply.getAddress(),reply.getPort() );
+                for (int i = 0 ; i < 3 ; i++)
+                    res.putInt(0);
+                resp = new DatagramPacket(res.array(),res.limit(),request.getAddress(),request.getPort() );
                 sock.send(resp);
             }catch( Exception e){
                 e.printStackTrace();
@@ -73,17 +71,17 @@ public class Graficos extends JFrame {
         int previous;
         int idRequest;
         boolean draw = true;
-        Graficos.Server server = new Graficos.Server(7200);
+        Plotter.Server server = new Plotter.Server(7200);
         server.start();
         while(true) {
             idRequest = 0;
             previous = 300;
             setPlane(g);
-            if (draw==true){
+            if ( draw )
                 g.setColor(Color.ORANGE);
-            }else{
-                g.setColor(Color.BLACK);
-            }
+            else
+                g.setColor(Color.WHITE);
+            
             for( int i=0; i < 800; i++ ){
                 server.receive();
                 if ( idRequest < server.getID() )
@@ -91,7 +89,6 @@ public class Graficos extends JFrame {
                 else{
                     idRequest++;
                     g.drawLine( i,previous,server.getX(), server.getY() );
-                    System.out.println("X: " + server.getX() + " Y: " +server.getY());
                     previous = server.getY();
                 }
                 server.response(idRequest);
@@ -101,16 +98,16 @@ public class Graficos extends JFrame {
     }
     
     private static void setPlane( Graphics g){
-        g.setColor(Color.WHITE);
+        g.setColor(Color.BLACK);
         g.drawLine(400,0,400,700);
         g.drawLine(0,300,900,300);
         g.setColor(Color.BLUE);
         g.drawLine(0,300,0,420);
-        g.drawLine(0,420,320,167);
-        g.drawLine(320,167,320,420);
-        g.drawLine(320,420,640,167);
-        g.drawLine(640,167,640,420);
-        g.drawLine(640,420,800,300);
+        g.drawLine(0,420,321,168);
+        g.drawLine(321,168,322,421);
+        g.drawLine(321,421,641,168);
+        g.drawLine(641,168,642,421);
+        g.drawLine(641,421,800,300);
     }
     
     @SuppressWarnings("unchecked")                         
@@ -128,15 +125,17 @@ public class Graficos extends JFrame {
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGap(0, 600, Short.MAX_VALUE)
         );
-        super.setBackground(Color.BLACK);
-        super.setTitle("Servidor Gráfico");
-        super.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         pack();
     }                    
 
     public static void main(String args[]) {
         java.awt.EventQueue.invokeLater(() -> {
-            new Graficos().setVisible(true);
+            Plotter gf = new Plotter();
+            gf.setVisible(true);
+            gf.setTitle("Servidor Gráfico");
+            gf.setBackground(Color.WHITE);
+            gf.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         });
     }
 }
+

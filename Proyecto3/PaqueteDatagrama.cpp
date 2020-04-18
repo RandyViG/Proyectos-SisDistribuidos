@@ -6,7 +6,6 @@ using namespace std;
 
 PaqueteDatagrama :: PaqueteDatagrama(char* data, unsigned int datatam, char* dir, int port) {
     datos = new char[datatam];
-    printf("Enviando tam: %d \n", datatam);
     longitud = datatam;
     memcpy(datos, data, longitud);
     memcpy(ip, dir, sizeof(ip));

@@ -20,7 +20,6 @@ int * Solicitud :: doOperation( char *IP, int puerto, int operationId, char *arg
     datos.operationId = operationId;
     datos.requestId = id++;
     memcpy( datos.arguments ,arguments , sizeof(arguments) );
-    printf("id %d Env x: %d , Env y: %d\n",id,datos.arguments[0],datos.arguments[1]);
     PaqueteDatagrama dat = PaqueteDatagrama( (char *)&datos, sizeof(datos), IP ,puerto );
     PaqueteDatagrama paqdata = PaqueteDatagrama( sizeof(respuesta) );
     for(i=0; i < 20 ; i++){
