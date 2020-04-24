@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <netinet/in.h>
 #include <netdb.h>
-#include "PaqueteDatagrama.h"
 
 class SocketMulticast{
     private:

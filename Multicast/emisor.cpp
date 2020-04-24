@@ -2,7 +2,6 @@
 #include <cstring>
 #include "SocketMulticast.h"
 #include "SocketDatagrama.h"
-#include "PaqueteDatagrama.h"
 using namespace std;
 
 #define SEGUNDOS 2

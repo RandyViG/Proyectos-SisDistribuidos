@@ -1,18 +1,10 @@
+#include "SocketMulticast.h"
 #include <iostream>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <stdio.h>
-#include <iostream>
-#include <netinet/in.h>
 #include <arpa/inet.h>
 #include <string.h>
 #include <netdb.h>
 #include <unistd.h>
 #include <errno.h>
-#include <netdb.h>
-#include <errno.h>
-#include "SocketMulticast.h"
-#include "PaqueteDatagrama.h"
 using namespace std;
 
 SocketMulticast :: SocketMulticast(int p){

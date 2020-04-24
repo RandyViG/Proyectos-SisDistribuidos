@@ -1,28 +1,18 @@
-#include "PaqueteDatagrama.h"
 #include "SocketDatagrama.h"
-
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <stdio.h>
 #include <iostream>
-#include <netinet/in.h>
 #include <arpa/inet.h>
 #include <string.h>
-#include <netdb.h>
 #include <unistd.h>
 #include <errno.h>
 using namespace std;
 
 SocketDatagrama::SocketDatagrama(int p){
-        s = socket(AF_INET, SOCK_DGRAM, 0);
-        bzero((char *)&direccionLocal, sizeof(direccionLocal));
-
-        direccionLocal.sin_family = AF_INET;
-        direccionLocal.sin_addr.s_addr = INADDR_ANY;
-        direccionLocal.sin_port = htons(p);
-        
-        bind(s, (struct sockaddr *)&direccionLocal, sizeof(direccionLocal));
-    
+    s = socket(AF_INET, SOCK_DGRAM, 0);
+    bzero((char *)&direccionLocal, sizeof(direccionLocal));
+    direccionLocal.sin_family = AF_INET;
+    direccionLocal.sin_addr.s_addr = INADDR_ANY;
+    direccionLocal.sin_port = htons(p);
+    bind(s, (struct sockaddr *)&direccionLocal, sizeof(direccionLocal));
 }
 
 SocketDatagrama::~SocketDatagrama(){
