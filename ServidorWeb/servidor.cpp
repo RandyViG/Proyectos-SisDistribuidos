@@ -25,6 +25,7 @@ int votos_partidos[9]={0,0,0,0,0,0,0,0,0};
 static void ev_handler( struct mg_connection *nc, int ev, void *ev_data );
 static void handle_info_votes(struct mg_connection *nc,SocketDatagrama *sd);
 void info_votos( void );
+void web_embedded( void );
 
 int main( int argc , char *argv[] ){
     if( argc != 7 ){
@@ -42,32 +43,12 @@ int main( int argc , char *argv[] ){
     struct TrieNode *trie = getNode();
     int archivo,ptoTime = atoi( argv[3] );
     string aux;
-    struct mg_mgr mgr;          //Event manager
-    struct mg_connection *nc;   //Mongoose conection
-    cs_stat_t st;
-    thread th1( info_votos );
-
-    /*  Embedded web server  */
-    mg_mgr_init(&mgr, NULL);    //Initialise Mongoose manager
-    nc = mg_bind(&mgr, s_http_port, ev_handler);  //Create connections
-    if (nc == NULL) {
-        fprintf(stderr, "Cannot bind to %s\n", s_http_port);
-        exit(1);
-    }
-    // Set up HTTP server parameters
-    mg_set_protocol_http_websocket(nc);
-    s_http_server_opts.document_root = "web_root";  // Set up web root directory
-    // Set the directory 
-    if(mg_stat(s_http_server_opts.document_root, &st) != 0) {
-        fprintf(stderr, "%s", "Cannot find web_root directory, exiting\n");
-        exit(1);
-    }
+    thread th1( info_votos ), th2( web_embedded );
 
     printf("\n********** Servidor iniciado **********");
     printf("\nEsperando mensajes en el puerto: %d\n",pto);
 
-    while(1) {
-        mg_mgr_poll(&mgr, 1000);
+    while(1){
         memcpy( &datos,res.getRequest( ),sizeof(datos) );
         if( res.getError() == 0 ){
             memcpy( &timestamp , tiempo.doOperation(argv[2],ptoTime,0,(char*)&timestamp) , sizeof(timestamp) );
@@ -125,7 +106,31 @@ int main( int argc , char *argv[] ){
         }
         res.sendReply( (char*)&timestamp );
     }
-    mg_mgr_free(&mgr);
+    th1.join(); th2.join();
+    return 0;
+}
+
+void web_embedded( void ){
+    struct mg_mgr mgr;          //Event manager
+    struct mg_connection *nc;   //Mongoose conection
+    cs_stat_t st;
+
+	mg_mgr_init(&mgr, NULL);
+
+	printf("Starting web server on port %s\n", s_http_port);
+	nc = mg_bind(&mgr, s_http_port, ev_handler);
+	if (nc == NULL) {
+		printf("Failed to create listener\n");
+		exit(1);
+	}
+	// Set up HTTP server parameters
+	mg_set_protocol_http_websocket(nc);
+	s_http_server_opts.document_root = "web_root"; // Serve current directory
+	s_http_server_opts.enable_directory_listing = "yes";
+	for (;;) {
+		mg_mgr_poll(&mgr, 1000);
+	}
+	mg_mgr_free(&mgr);
 }
 
 static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
@@ -150,24 +155,26 @@ static void handle_info_votes(struct mg_connection *nc,SocketDatagrama *sd) {
     string servidores = "";
     char ip[16];
     sd->envia(env);
-    while( s < 20 ){
+    while ( s < 20 ){    
         if( sd->recibeTimeout( recibe , 1 , 0 ) != -1 ){
             c++;
             memcpy( aux , recibe.obtieneDatos() , sizeof(aux) );
-            sd->envia(env);
-            for( i = 0; i < 9 ; i++)
+            for( i = 0 ; i < 9 ; i++)
                 votos[i] += aux[i];
             sprintf( ip , "%d. %s </br>" , c,recibe.obtieneDireccion() );
             servidores += string(ip);
         }
         s++;
     }
+    printf("IPs: %s \n",servidores.c_str());
+    //cout << servidores << endl;
     // Use chunked encoding in order to avoid calculating Content-Length
     mg_printf(nc, "%s", "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n");
     //PRI,PAN,PRD P_T,VDE,MVC,MOR,PES,PNL
     mg_printf_http_chunk( nc, "{\"votos\":{\"PRI\":%d,\"PAN\":%d,\"PRD\":%d,\"P_T\":%d,\"VDE\":%d,\"MVC\":%d,\"MOR\":%d,\"PES\":%d,\"PNL\":%d}}", 
                           votos[0],votos[1],votos[2],votos[3],votos[4],votos[5],votos[6],votos[7],votos[8] );
     // Send empty chunk, the end of response
+    printf("Votos: %d , %d , %d , %d , %d , %d , %d , %d , %d\n", votos[0],votos[1],votos[2],votos[3],votos[4],votos[5],votos[6],votos[7],votos[8]);
     mg_send_http_chunk(nc, "", 0);
 }
 
@@ -175,14 +182,10 @@ void info_votos( void ){
     int i;
     SocketDatagrama sock( ptoBroad );
     PaqueteDatagrama recibe( sizeof(char) );
-    while( 1 ){ 
+    while( 1 ){
         sock.recibe( recibe );
         PaqueteDatagrama envia( (char*)votos_partidos , sizeof(votos_partidos) , 
                                 recibe.obtieneDireccion() , recibe.obtienePuerto() );
-        for( i = 0 ; i < 7 ; i++){
-            sock.envia( envia );
-            if( sock.recibeTimeout( recibe , 1 , 0 ) != -1 )
-                break;
-        }
+        sock.envia( envia );
     }
 }

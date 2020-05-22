@@ -36,8 +36,8 @@ int main(int argc, char *argv[]){
 	for( i = 1 , j=0; i <=5 ; i+=2 , j++)
 		datos[j].ip = argv[i];
 
-	datos[0].limInferior='0'; datos[0].limSuperrior='3';
-	datos[1].limInferior='4'; datos[1].limSuperrior='6';
+	datos[0].limInferior='0'; datos[0].limSuperrior='4';
+	datos[1].limInferior='5'; datos[1].limSuperrior='9';
 	datos[2].limInferior='7'; datos[2].limSuperrior='9';
 
 	thread th1(enviarRegistro,&datos[0]),

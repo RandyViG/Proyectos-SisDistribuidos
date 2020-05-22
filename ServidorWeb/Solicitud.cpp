@@ -24,7 +24,7 @@ char * Solicitud :: doOperation( char *IP, int puerto, int operationId, char *ar
     PaqueteDatagrama dat = PaqueteDatagrama( (char *)&datos, sizeof(datos), IP ,puerto );
     PaqueteDatagrama paqdata = PaqueteDatagrama( sizeof(respuesta) );
 
-    for(i=0; i < 100 ; i++){
+    for(i=0; i < 7 ; i++){
         socketlocal->envia(dat);
         n = socketlocal->recibeTimeout(paqdata,SEGUNDOS,MICROSEGUNDOS);
         if ( n != -1){
