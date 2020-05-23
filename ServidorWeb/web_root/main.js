@@ -1,91 +1,38 @@
-/*$(document).ready(function() {
-    setInterval( function(){
-        $.ajax({
-            url: '/get_cpu_usage',
-            dataType: 'json',
-            success: function( json ) {
-                //$('#cpu_usage').text(json.result + '% ');
-            }
-        });
-    }, 1000);
-
-
-});*/
 
 $(document).ready(function() {
-    // Start 1-second timer to call RESTful endpoint
-    setInterval(function() {
-      $.ajax({
-        url: '/get_votes',
-        dataType: 'json',
-        success: function(json) {
-          //$('#cpu_usage').text(json.result + '% ');
-          console.log( json )
-        }
-      });
-    }, 1000);
-    /*
-    // Initialize graph
-    var $c = $('<div class="graph"/>').appendTo('#graphs');
-    var dur = 120;
-    var past = Date.now() - dur * 1000;
-    var options = {
-      lines: {
-        fill: true,
-        lineWidth: 0,
-        fillColor: {colors: [ { opacity: 0 }, { opacity: 1 } ] }
-      },
-      grid: { borderWidth: 1, borderColor: '#ccc'},
-      xaxis: { mode: 'time', ticks: 5 },
-      legend: { labelBoxBorderColor: '#fff' },
-      colors: [ '#fec', '#396', '#e39', '9e2' ],
-      hooks: {
-        draw: [function(plot, canvas) {
-          canvas.font = '13px sans-serif';
-          canvas.fillStyle = '#aaa';
-          canvas.fillText('Resource Usage', 35, 25);
-        }]
-      }
+    var votos;
+    // Start 0.5-second timer to call RESTful endpoint
+    setInterval( function() {
+        $.ajax({
+            url: '/get_votes',
+            dataType: 'json',
+            success: function(json) {
+                console.log( json );
+                votos = json.votos;
+                console.log( "Peticiones" );
+                console.log( "PRI: " + votos.PRI );
+                console.log( "IPS: " + votos.IPS);
+            }
+        });
+    }, 500);
+    
+    var data = {
+        //PRI,PAN,PRD P_T,VDE,MVC,MOR,PES,PNL
+        labels: ["PRI","PAN","PRD","P_T","VDE","MVC","MOR","PES","PNL"],
+        datasets: [
+            {
+                label: "My First dataset",
+                fillColor: "rgba(220,220,220,0.5)",
+                strokeColor: "rgba(220,220,220,0.8)",
+                highlightFill: "rgba(220,220,220,0.75)",
+                highlightStroke: "rgba(220,220,220,1)",
+                data: [votos.PRI,votos.PAN,votos.PRD,votos.P_T,votos.VDE,votos.MVC,votos.MOR,votos.PES,votos.PNL]
+            }
+        ]
     };
-    var plot = $.plot($c, [], options);
-  
-    var updateGraph = function(counter) {
-      var data = plot.getData();
-      var now = Date.now();
-      var oldest = now - dur * 1000;
-      data[0] = {
-        show: false,
-        data: [[oldest, null], [now, null]]
-      };
-  
-      console.log(data);
-  
-      // Remove old points
-      $.each(data, function(di, d) {
-        while (d.data.length > 0 && d.data[0][0] < oldest) {
-          d.data.shift();
-        }
-      });
-  
-      // Add new points
-      var new_datapoint = [now, counter];
-      if (data[1]) {
-        data[1].label = 'memory';
-        data[1].data.push(new_datapoint);
-      } else {
-        data[1] = [{ data: [new_datapoint] }];
-      }
-  
-      // Redraw the graph
-      plot.setData(data);
-      plot.setupGrid();
-      plot.draw();
-    };
-  
-    // Create Websocket connection. For simplicity, no reconnect logic is here.
-    var ws = new WebSocket('ws://' + location.host);
-    ws.onmessage = function(ev) {
-      updateGraph(ev.data);
-    };*/
+    
+    var ctx = document.getElementById("graphs").getContext("2d");
+    var myBarChart = new Chart(ctx).Bar(data);
+    
   });
   
