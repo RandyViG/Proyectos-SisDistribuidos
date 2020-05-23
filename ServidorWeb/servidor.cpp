@@ -157,7 +157,6 @@ static void handle_info_votes(struct mg_connection *nc,SocketDatagrama *sd) {
     PaqueteDatagrama env( &a , sizeof(a) , ipBroad , ptoBroad );
     PaqueteDatagrama recibe( sizeof(votos) );
     string servidores = "";
-    char ip[16];
     sd->envia(env);
     while ( s < 10 ){    
         if( sd->recibeTimeout( recibe , 0 , 200000 ) != -1 ){
@@ -165,7 +164,7 @@ static void handle_info_votes(struct mg_connection *nc,SocketDatagrama *sd) {
             memcpy( aux , recibe.obtieneDatos() , sizeof(aux) );
             for( i = 0 ; i < 9 ; i++)
                 votos[i] += aux[i];
-            servidores += string( recibe.obtieneDireccion() ) + " ";
+            servidores += string( recibe.obtieneDireccion() ) + "</br>";
         }
         s++;
     }
