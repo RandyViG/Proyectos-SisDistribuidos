@@ -1,5 +1,7 @@
 #include "Solicitud.h"
 #include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <cstring>
 #include <thread>
@@ -10,16 +12,22 @@ using namespace std;
 
 const double PI = 3.141592653589;
 const double periodos = PI / 160;
-char ip[16]= "127.0.0.1";
+char *ip;
 mutex m;
-int pto = 7200;
+int pto;
 
 void graficar( int i );
 int escala( double y );
 void calcularCoordenadas(int * coordenada, int iteracion , int termino);
 double serieFourier( double x , int termino);
 
-int main( void ){
+int main( int argc , char *argv[] ){
+    if( argc < 3 ){
+        printf("Uso: %s IpServidor pto\n",argv[0]);
+        exit(1);
+    }
+    ip = argv[1];
+    pto = atoi( argv[2] );
     for ( int i = 0 ; 1 ; i++ ){
         thread dibujar(graficar, i),borrar(graficar, i);
         dibujar.join(); borrar.join();

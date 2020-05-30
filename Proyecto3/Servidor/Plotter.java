@@ -3,14 +3,14 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.awt.Color;
 import java.awt.Graphics;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import javax.swing.JFrame;
 import javax.swing.WindowConstants;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 
 public class Plotter extends JFrame {
+    private static final long serialVersionUID = 1L;
+    static int port;
   
     public Plotter() {
         initComponents();
@@ -71,7 +71,7 @@ public class Plotter extends JFrame {
         int previous;
         int idRequest;
         boolean draw = true;
-        Plotter.Server server = new Plotter.Server(7200);
+        Plotter.Server server = new Plotter.Server( port );
         server.start();
         while(true) {
             idRequest = 0;
@@ -109,8 +109,7 @@ public class Plotter extends JFrame {
         g.drawLine(641,168,642,421);
         g.drawLine(641,421,800,300);
     }
-    
-    @SuppressWarnings("unchecked")                         
+                          
     private void initComponents() {
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
@@ -128,7 +127,13 @@ public class Plotter extends JFrame {
         pack();
     }                    
 
-    public static void main(String args[]) {
+    public static void main( String args[] ) {
+        if( args.length < 1 ){
+            System.out.println("Uso: java Plotter Pto");
+            return;
+        }
+        port = Integer.parseInt( args[0] );
+
         java.awt.EventQueue.invokeLater(() -> {
             Plotter gf = new Plotter();
             gf.setVisible(true);
